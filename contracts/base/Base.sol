@@ -1,22 +1,33 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.x <0.9.0;
+pragma solidity ^0.8.20;
 
-contract Base
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+
+contract Base is Initializable, UUPSUpgradeable, ReentrancyGuardUpgradeable, OwnableUpgradeable
 {
-    address internal  _owner;
-    address payable internal  _coinbase;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    address payable internal _coinbase;
 
     modifier isOwner() {
-        assert(msg.sender == _owner);
+        require(_msgSender() == owner(), "Base: caller is not the owner");
         _;
     }
 
-    constructor()
-    {
-        _owner = msg.sender;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
+
+    function initialize() public virtual initializer {
+        __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
+        __Ownable_init();
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal virtual override isOwner {}
 
     fallback() external virtual payable {
         revert();
@@ -30,20 +41,15 @@ contract Base
         _coinbase = cb;
     }
 
-    function transferOwnership(address newOwner) public virtual isOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        _transferOwnership(newOwner);
-    }
-
-    function _transferOwnership(address newOwner) internal virtual {
-        address oldOwner = _owner;
-        _owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
+    function transferOwnership(address newOwner) public virtual override isOwner {
+        super.transferOwnership(newOwner);
     }
 
     function suicide0(address payable receiver)
     public
     isOwner {
-        selfdestruct(receiver);
+        assembly {
+            selfdestruct(receiver)
+        }
     }
 }

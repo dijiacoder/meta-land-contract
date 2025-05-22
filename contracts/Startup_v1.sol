@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.x <0.9.0;
+pragma solidity ^0.8.20;
 
 import "../contracts/base/Base.sol";
 
@@ -13,7 +13,6 @@ contract Startup is Base
         string name;
         address walletAddress;
     }
-
 
     struct Profile {
         /** startup name */
@@ -40,19 +39,20 @@ contract Startup is Base
     //public name mappong to startup
     mapping(string => Profile) public startups;
 
-    constructor() Base()
-    {
-        _owner = msg.sender;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize() public override initializer {
+        super.initialize();
     }
 
     // for web front, ["zehui",1,"avatar","mission","overview",true]
-    function newStartup(Profile calldata p) public payable {
-        // require(_coinbase != address(0), "the address can not be the smart contract address");
+    function newStartup(Profile calldata p) public payable nonReentrant {
         require(bytes(p.name).length != 0, "name can not be null");
-        //名称唯一
-        require(!startups[p.name].isValidate, "startup name has been used");
-        // require(startups[p.name].tokenContract != p.tokenContract, "token contract has been used");
-        // p.isValidate = true;
+        require(bytes(startups[p.name].name).length == 0, "startup name has been used");
+        // require(!startups[p.name].isValidate, "startup name has been used");
         startups[p.name] = p;
         emit created(p.name, p, msg.sender);
     }

@@ -1,13 +1,10 @@
 {
-  "name": "comunion-contract",
+  "name": "meta-land-contract",
+  "description": "meta land contract",
   "version": "1.0.0",
-  "description": "comunion contract for v5+ version",
-  "main": "truffle-config.js",
-  "directories": {
-    "test": "test"
-  },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.2.0",
+    "@openzeppelin/contracts": "^4.9.0",
+    "@openzeppelin/contracts-upgradeable": "^4.9.6",
     "@remix-project/remixd": "^0.6.45",
     "bip39": "^3.0.3",
     "ethereumjs-util": "^7.0.8",
@@ -16,20 +13,13 @@
     "safemath": "^1.0.6",
     "secp256k1": "^4.0.2"
   },
-  "scripts": {
-    "compile": "truffle compile",
-    "sepolia": "truffle migrate --reset --network sepolia",
-    "dev": "truffle migrate --reset ---network development",
-    "remixd": "remixd -s ./ --remix-ide  https://remix.ethereum.org"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git@git.zhlh6.cn:comunion-io/comunion-contract.git"
-  },
-  "author": "zehui ys",
-  "license": "ISC",
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@openzeppelin/hardhat-upgrades": "^1.21.1",
+    "chai": "^4.3.6",
+    "ethers": "^5.7.2",
     "hardhat": "^2.22.19",
-    "@nomicfoundation/hardhat-toolbox": "^2.0.0"
-  }
+    "solidity-coverage": "^0.8.14"
+  },
+  "license": "ISC"
 }
