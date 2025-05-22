@@ -127,22 +127,21 @@ describe.only("Startup", function () {
         });
     });
 
-    // describe("升级功能", function () {
-    //     it("应该能升级到新版本", async function () {
-    //         const StartupV2 = await ethers.getContractFactory("Startup_v2");
-    //         await upgrades.upgradeProxy(proxyAddress, StartupV2);
+    describe("upgrade", function () {
+        it("should upgrade to the new version", async function () {
+            const StartupV2 = await ethers.getContractFactory("StartupV2");
+            await upgrades.upgradeProxy(proxyAddress, StartupV2);
 
-    //         // 验证升级后的合约地址
-    //         const newImplementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
-    //         expect(newImplementationAddress).to.not.equal(implementationAddress);
-    //     });
+            const newImplementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+            expect(newImplementationAddress).to.not.equal(implementationAddress);
+        });
 
-    //     it("只有所有者能升级合约", async function () {
-    //         const StartupV2 = await ethers.getContractFactory("Startup_v2");
-    //         await expect(upgrades.upgradeProxy(proxyAddress, StartupV2.connect(addr1)))
-    //             .to.be.revertedWith("Ownable: caller is not the owner");
-    //     });
-    // });
+        it("only the owner can upgrade the contract", async function () {
+            const StartupV2 = await ethers.getContractFactory("StartupV2");
+            await expect(upgrades.upgradeProxy(proxyAddress, StartupV2.connect(addr1)))
+                .to.be.revertedWith("Base: caller is not the owner");
+        });
+    });
 
     // describe("防重入保护", function () {
     //     it("应该防止重入攻击", async function () {
