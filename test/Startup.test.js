@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { upgrades } = require("hardhat");
 
-describe.only("Startup", function () {
+describe("Startup", function () {
     let Startup;
     let startupProxy;
     let deployer;

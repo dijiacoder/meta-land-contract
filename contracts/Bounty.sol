@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: SimPL-2.0
-pragma solidity >=0.8.x <0.9.0;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./ownership/Secondary.sol";
 import "./FactoryStore.sol";
 import "./BountyStore.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 struct Parameters {
     address depositToken;
@@ -17,28 +21,50 @@ struct Parameters {
     uint256 applyDeadline;
 }
 
-contract BountyFactory is Ownable {
+contract BountyFactory is Initializable, UUPSUpgradeable, ReentrancyGuardUpgradeable, OwnableUpgradeable {
     event Created(address founder, address bounty, Parameters paras);
 
-    FactoryStore store;
+    FactoryStore public store;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
+        _disableInitializers();
+    }
+
+    function initialize() public initializer {
+        __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
+        __Ownable_init();
         store = new FactoryStore();
     }
 
-    function createBounty(address _depositToken, uint256 _founderDepositAmount, uint256 _applicantDepositAmount, uint256 _applyDeadline) payable public {
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    /**
+    * @notice 创建 Bounty
+    * @param _depositToken 存款代币地址
+    * @param _founderDepositAmount 创始人存款金额
+    * @param _applicantDepositAmount 申请人存款金额
+    * @param _applyDeadline 申请截止日期
+    */
+    function createBounty(address _depositToken, uint256 _founderDepositAmount, uint256 _applicantDepositAmount, uint256 _applyDeadline) 
+        public 
+        payable 
+        nonReentrant 
+    {
         require(_applyDeadline > block.timestamp, "Applicant cutoff date is expired");
-        Parameters memory paras = Parameters({depositToken: _depositToken,
-        depositTokenIsNative: false,
-        founderDepositAmount: _founderDepositAmount,
-        applicantDepositMinAmount: _applicantDepositAmount,
-        applyDeadline: _applyDeadline});
+        Parameters memory paras = Parameters({
+            depositToken: _depositToken,
+            depositTokenIsNative: false,
+            founderDepositAmount: _founderDepositAmount,
+            applicantDepositMinAmount: _applicantDepositAmount,
+            applyDeadline: _applyDeadline
+        });
         Bounty bounty = new Bounty(address(this), msg.sender);
         bounty.init(paras);
         if (paras.founderDepositAmount > 0) {
             if (_depositToken == address(0)) {
                 require(msg.value == paras.founderDepositAmount, "msg.value is not valid");
-                // require(msg.sender.balance >= paras.founderDepositAmount, "Your balance is insufficient");
                 (bool isSend,) = bounty.vaultAccount().call{value: paras.founderDepositAmount}("");
                 require(isSend, "Transfer contract failure");
                 paras.depositTokenIsNative = true;
@@ -74,10 +100,7 @@ contract BountyFactory is Ownable {
     function transferStore(address newStore) external onlyOwner {
         store = FactoryStore(newStore);
     }
-
-    function renounceOwnership() public override onlyOwner {
-    }
-}
+} 
 
 contract Bounty is Ownable {
     using SafeMath for uint;
