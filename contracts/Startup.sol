@@ -1,51 +1,60 @@
-// SPDX-License-Identifier: SimPL-2.0
-pragma solidity ^0.8.x <0.9.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./StartupStore.sol";
+import "../contracts/base/Base.sol";
 
-contract StartupV1 is Ownable {
-    struct Profile {
+contract Startup is Base
+{
+    enum Mode{
+        NONE, ESG, NGO, DAO, COM
+    }
+
+    struct wallet {
         string name;
-        uint256 chainId;
-        bool used;
+        address walletAddress;
     }
 
-    event Created(address founder, Profile startup);
+    struct Profile {
+        /** startup name */
+        string name;
+        /** startup type */
+        Mode mode;
+        /** startup hash */
+        // string[] hashtag;
+        /** startup logo src */
+        string logo;
+        /** startup mission */
+        string mission;
+        /** startup token contract */
+        // address tokenContract;
+        /** startup compose wallet */
+        // wallet[] wallets;
+        string overview;
+        /** is validate the startup name is only */
+        bool isValidate;
+    }
 
-    StartupStore store;
+    event created(string name, Profile startUp, address msg);
 
+    //public name mappong to startup
+    mapping(string => Profile) public startups;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        store = new StartupStore();
+        _disableInitializers();
     }
 
-    function createStartup(Profile calldata p) public {
-        require(bytes(p.name).length > 0, "Name can not be null");
-        Profile memory pm = getStartup(p.name);
-        require(!pm.used, "Duplicate name");
-        pm = Profile(p.name, p.chainId, true);
-        store.putStartup(pm.name, pm.chainId, msg.sender, pm.used);
-        emit Created(msg.sender, pm);
+    function initialize() public override initializer {
+        super.initialize();
     }
 
-    function getStartup(string memory name) public view returns (Profile memory) {
-        (string memory _name, uint256 _chainId, , bool _used) = store.getStartup(name);
-        Profile memory p = Profile(_name, _chainId, _used);
-        return p;
-    }
-
-    function getStore() external onlyOwner view returns (address) {
-        return address(store);
-    }
-
-    function transferPrimary(address newPrimary) external onlyOwner {
-        store.transferPrimary(newPrimary);
-    }
-
-    function transferStore(address newStore) external onlyOwner {
-        store = StartupStore(newStore);
-    }
-
-    function renounceOwnership() public override onlyOwner {
+    // for web front, ["zehui",1,"avatar","mission","overview",true]
+    function newStartup(Profile calldata p) public payable nonReentrant {
+        require(bytes(p.name).length != 0, "name can not be null");
+        require(bytes(startups[p.name].name).length == 0, "startup name has been used");
+        // require(!startups[p.name].isValidate, "startup name has been used");
+        startups[p.name] = p;
+        emit created(p.name, p, msg.sender);
     }
 }
+

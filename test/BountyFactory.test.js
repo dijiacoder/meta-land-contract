@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 
-describe.only("BountyFactory", function () {
+describe("BountyFactory", function () {
     let BountyFactory;
     let bountyFactory;
     let MockERC20;
@@ -164,4 +164,75 @@ describe.only("BountyFactory", function () {
             )).to.be.revertedWith("Deposit token allowance is insufficient");
         });
     });
+
+    const applyDeadline = Math.floor(Date.now() / 1000) + 3600;
+    const founderDepositAmount = ethers.utils.parseEther("1.0");
+    const applicantDepositAmount = ethers.utils.parseEther("0.1");
+
+    describe("children() test", function () {
+
+        it("children() is empty", async function () {
+            const children = await bountyFactory.children();
+            expect(children).to.be.an('array');
+            expect(children.length).to.equal(0);
+        });
+
+        it("create one bounty", async function () {
+            // create one bounty
+            await mockToken.mint(deployer.address, founderDepositAmount);
+            await mockToken.approve(bountyFactory.address, founderDepositAmount);
+
+            const tx = await bountyFactory.createBounty(
+                mockToken.address,
+                founderDepositAmount,
+                applicantDepositAmount,
+                applyDeadline
+            );
+
+            const receipt = await tx.wait();
+            const event = receipt.events.find(e => e.event === 'Created');
+
+            const expectedBountyAddress = event.args.bounty;
+            console.log("expectedBountyAddress:", expectedBountyAddress);
+
+            const children = await bountyFactory.children();
+            console.log("children:", children);
+    
+            expect(children).to.be.an('array');
+            expect(children.length).to.equal(1);
+            expect(children[0]).to.equal(expectedBountyAddress);
+            
+            const bounty = await ethers.getContractAt("Bounty", children[0]);
+            expect(bounty.address).to.equal(expectedBountyAddress);
+        });
+    });
+
+    describe.only("isChild() test", function () {
+        it("isChild() is empty", async function () {
+            const isChild = await bountyFactory.isChild(ethers.constants.AddressZero);
+            console.log("isChild:", isChild);
+            expect(isChild).to.equal(false);
+        });
+
+        it("isChild() is not empty", async function () {
+
+            await mockToken.mint(deployer.address, founderDepositAmount);
+            await mockToken.approve(bountyFactory.address, founderDepositAmount);
+
+            const tx = await bountyFactory.createBounty(
+                mockToken.address,
+                founderDepositAmount,
+                applicantDepositAmount,
+                applyDeadline
+            );
+
+            const receipt = await tx.wait();
+            const event = receipt.events.find(e => e.event === 'Created');
+            const bountyAddress = event.args.bounty;
+
+            const isChild = await bountyFactory.isChild(bountyAddress);
+            console.log("isChild:", isChild);
+            expect(isChild).to.equal(true);
+        });
+    })
 });
