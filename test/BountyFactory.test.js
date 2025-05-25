@@ -207,7 +207,7 @@ describe("BountyFactory", function () {
         });
     });
 
-    describe.only("isChild() test", function () {
+    describe("isChild() test", function () {
         it("isChild() is empty", async function () {
             const isChild = await bountyFactory.isChild(ethers.constants.AddressZero);
             console.log("isChild:", isChild);

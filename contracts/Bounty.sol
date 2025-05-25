@@ -12,6 +12,7 @@ import "./ownership/Secondary.sol";
 import "./FactoryStore.sol";
 import "./BountyStore.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
 
 struct Parameters {
     address depositToken;
@@ -75,6 +76,7 @@ contract BountyFactory is Initializable, UUPSUpgradeable, ReentrancyGuardUpgrade
                 require(depositToken.transferFrom(msg.sender, bounty.vaultAccount(), _founderDepositAmount), "Deposit token transferFrom failure");
             }
         }
+        // 设置合约的owner为msg.sender
         bounty.transferOwnership(msg.sender);
 
         store.push(address(bounty));
