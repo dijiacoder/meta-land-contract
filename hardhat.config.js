@@ -32,14 +32,20 @@ if (!SEPOLIA_ALCHEMY_AK) {
 module.exports = {
   solidity: {
     version: "0.8.20",
-
     settings: {
       evmVersion: "shanghai",
       optimizer: {
         enabled: true,
-        runs: 200, // 增加 runs 值以提高优化效果
+        runs: 200,
       },
+      viaIR: true, // 启用中间表示优化
     },
+  },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts"
   },
   networks: {
     // mainnet: {
@@ -51,6 +57,7 @@ module.exports = {
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${SEPOLIA_ALCHEMY_AK}`,
       accounts: [`${SEPOLIA_PK_ONE}`, `${SEPOLIA_PK_TWO}`, `${SEPOLIA_PK_THREE}`],
+      chainId: 11155111,
     },
   },
   abiExporter: {
