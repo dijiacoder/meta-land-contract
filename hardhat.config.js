@@ -1,6 +1,33 @@
+require('@openzeppelin/hardhat-upgrades');
 require("@nomicfoundation/hardhat-toolbox");
+require('hardhat-abi-exporter');
 
-const infuraKey = "d8ed0bd1de8242d998a1405b6932ab33";
+// 配置参考 .env.example里的，换成自己真实的，放到.env里就可以了
+// config
+const { config: dotenvConfig } = require("dotenv")
+const { resolve } = require("path")
+dotenvConfig({ path: resolve(__dirname, "./.env") })
+
+const SEPOLIA_PK_ONE = process.env.SEPOLIA_PK_ONE
+const SEPOLIA_PK_TWO = process.env.SEPOLIA_PK_TWO
+const SEPOLIA_PK_THREE = process.env.SEPOLIA_PK_THREE
+if (!SEPOLIA_PK_ONE) {
+  throw new Error("Please set at least one private key in a .env file")
+}
+if (!SEPOLIA_PK_TWO) {
+  throw new Error("Please set two private key in a .env file, in case of interact.js not working...")
+}
+if (!SEPOLIA_PK_THREE) {
+  throw new Error("Please set three private key in a .env file, in case of interact.js not working...")
+}
+
+const MAINNET_PK = process.env.MAINNET_PK
+const MAINNET_ALCHEMY_AK = process.env.MAINNET_ALCHEMY_AK
+
+const SEPOLIA_ALCHEMY_AK = process.env.SEPOLIA_ALCHEMY_AK
+if (!SEPOLIA_ALCHEMY_AK) {
+  throw new Error("Please set your SEPOLIA_ALCHEMY_AK in a .env file")
+}
 
 module.exports = {
   solidity: {
@@ -15,12 +42,23 @@ module.exports = {
     },
   },
   networks: {
+    mainnet: {
+      url: `https://eth-mainnet.g.alchemy.com/v2/${MAINNET_ALCHEMY_AK}`,
+      accounts: [`${MAINNET_PK}`],
+      saveDeployments: true,
+      chainId: 1,
+    },
     sepolia: {
-      allowUnlimitedContractSize: true,
-      url: "https://sepolia.infura.io/v3/" + infuraKey,
-      accounts: [
-        "e6277f1f6d301bd3faf38e02f27f068b15abd3dc9f40a898112df9a287fbaef7",
-      ],
+      url: `https://eth-sepolia.g.alchemy.com/v2/${SEPOLIA_ALCHEMY_AK}`,
+      accounts: [`${SEPOLIA_PK_ONE}`, `${SEPOLIA_PK_TWO}`, `${SEPOLIA_PK_THREE}`],
     },
   },
+  abiExporter: {
+    path: './abi',  // 导出路径
+    clear: true,    // 每次编译前清空目录
+    flat: true,     // 扁平化输出（不创建子目录）
+  },
+  etherscan: {
+    apiKey: ""
+  }
 };

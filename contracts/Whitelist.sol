@@ -8,6 +8,8 @@ contract Whitelist is Ownable {
 
     event AddressAdded(address indexed account);
     event AddressRemoved(address indexed account);
+    constructor() Ownable(msg.sender) {}
+
     modifier onlyWhitelisted() {
         require(whitelist[msg.sender], "Only whitelisted addresses can call this function.");
         _;

@@ -3,8 +3,8 @@ pragma solidity >=0.8.x <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "../utils/SafeMath.sol";
 import "./ownership/Secondary.sol";
 import "./FactoryStore.sol";
 import "./BountyStore.sol";
@@ -22,7 +22,7 @@ contract BountyFactory is Ownable {
 
     FactoryStore store;
 
-    constructor() {
+    constructor() Ownable(msg.sender)  {
         store = new FactoryStore();
     }
 
@@ -205,7 +205,7 @@ contract Bounty is Ownable {
         _;
     }
 
-    constructor(address _factory, address _founder) {
+    constructor(address _factory, address _founder) Ownable(msg.sender) {
         factory = _factory;
         founder = _founder;
         thisAccount = address(this);

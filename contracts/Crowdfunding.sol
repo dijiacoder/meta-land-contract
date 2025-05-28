@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import { IERC20, IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "../utils/SafeMath.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ICrowdfundingFactory.sol";
 import "./FactoryStore.sol";
@@ -21,7 +22,7 @@ contract CrowdfundingFactory is Ownable {
     address public feeToSetter;
     address public transferSigner;
 
-    constructor(address _feeToSetter, address _feeTo, address _transferSigner) {
+    constructor(address _feeToSetter, address _feeTo, address _transferSigner) Ownable(msg.sender) {
         store = new FactoryStore();
         dexRouters = new Whitelist();
         feeToSetter = _feeToSetter;
@@ -255,7 +256,7 @@ contract Crowdfunding is Ownable, EIP712 {
         address _founder,
         string memory _name,
         string memory _version
-    ) EIP712(_name, _version) {
+    ) EIP712(_name, _version) Ownable(msg.sender) {
         factory = _factory;
         founder = _founder;
         thisAccount = address(this);

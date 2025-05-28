@@ -2,34 +2,36 @@
   "name": "comunion-contract",
   "version": "1.0.0",
   "description": "comunion contract for v5+ version",
-  "main": "truffle-config.js",
+  "main": "hardhat.config.js",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.2.0",
+    "@ethereumjs/wallet": "^10.0.0",
+    "@openzeppelin/contracts": "5.0.1",
+    "@openzeppelin/contracts-upgradeable": "5.0.1",
     "@remix-project/remixd": "^0.6.45",
     "bip39": "^3.0.3",
+    "dotenv": "^16.5.0",
     "ethereumjs-util": "^7.0.8",
-    "ethereumjs-wallet": "^1.0.1",
+    "ethers": "^5.4.7",
     "fs-extra": "^4.0.3",
-    "safemath": "^1.0.6",
+    "hardhat-abi-exporter": "^2.11.0",
     "secp256k1": "^4.0.2"
   },
   "scripts": {
-    "compile": "truffle compile",
-    "sepolia": "truffle migrate --reset --network sepolia",
-    "dev": "truffle migrate --reset ---network development",
-    "remixd": "remixd -s ./ --remix-ide  https://remix.ethereum.org"
+    "compile": "npx hardhat compile",
+    "sepolia": "npx hardhat run scripts/deploySepolia.js --network sepolia",
+    "dev": "npx hardhat run scripts/deployLocal.js --network localhost",
+    "remixd": "remixd -s ./ --remix-ide https://remix.ethereum.org"
   },
-  "repository": {
-    "type": "git",
-    "url": "git@git.zhlh6.cn:comunion-io/comunion-contract.git"
-  },
-  "author": "zehui ys",
   "license": "ISC",
   "devDependencies": {
-    "hardhat": "^2.22.19",
-    "@nomicfoundation/hardhat-toolbox": "^2.0.0"
-  }
+    "@nomicfoundation/hardhat-ethers": "3.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "@openzeppelin/hardhat-upgrades": "^1.2.1",
+    "@openzeppelin/upgrades-core": "1.44.1",
+    "hardhat": "^2.19.0"
+  },
+  "packageManager": "pnpm@8.15.4"
 }
