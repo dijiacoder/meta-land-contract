@@ -55,6 +55,9 @@ devDependencies:
   hardhat:
     specifier: ^2.19.0
     version: 2.24.0(ts-node@10.9.2)(typescript@5.8.3)
+  solidity-coverage:
+    specifier: ^0.8.16
+    version: 0.8.16(hardhat@2.24.0)
 
 packages:
 

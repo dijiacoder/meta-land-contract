@@ -1,6 +1,7 @@
 require('@openzeppelin/hardhat-upgrades');
 require("@nomicfoundation/hardhat-toolbox");
 require('hardhat-abi-exporter');
+require('solidity-coverage');
 
 // 配置参考 .env.example里的，换成自己真实的，放到.env里就可以了
 // config
@@ -38,7 +39,7 @@ module.exports = {
         enabled: true,
         runs: 200,
       },
-      viaIR: true, // 启用中间表示优化
+      // viaIR: true, // 暂时禁用中间表示优化来测试升级
     },
   },
   paths: {
@@ -67,5 +68,16 @@ module.exports = {
   },
   etherscan: {
     apiKey: ""
-  }
+  },
+  coverage: {
+    reporter: ['text', 'lcov', 'html'],
+    exclude: [
+      'test/',
+      'node_modules/',
+      'coverage/',
+      'artifacts/',
+      'cache/',
+      'abi/'
+    ],
+  },
 };

@@ -23,7 +23,9 @@
     "compile": "npx hardhat compile",
     "sepolia": "npx hardhat run scripts/deploySepolia.js --network sepolia",
     "dev": "npx hardhat run scripts/deployLocal.js --network localhost",
-    "remixd": "remixd -s ./ --remix-ide https://remix.ethereum.org"
+    "remixd": "remixd -s ./ --remix-ide https://remix.ethereum.org",
+    "test": "npx hardhat test",
+    "coverage": "npx hardhat coverage"
   },
   "license": "ISC",
   "devDependencies": {
@@ -31,7 +33,8 @@
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "@openzeppelin/hardhat-upgrades": "^1.2.1",
     "@openzeppelin/upgrades-core": "1.44.1",
-    "hardhat": "^2.19.0"
+    "hardhat": "^2.19.0",
+    "solidity-coverage": "^0.8.16"
   },
   "packageManager": "pnpm@8.15.4"
 }
