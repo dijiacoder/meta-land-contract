@@ -9,7 +9,4 @@ artifacts
 coverage
 cache
 .env
-<<<<<<< HEAD
-=======
 .deploys
->>>>>>> main
