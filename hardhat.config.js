@@ -32,7 +32,7 @@ if (!SEPOLIA_ALCHEMY_AK) {
 
 module.exports = {
   solidity: {
-    version: "0.8.20",
+    version: "0.8.22",
     settings: {
       evmVersion: "shanghai",
       optimizer: {

@@ -1,7 +1,8 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
+const { AddressZero } = ethers;
 
-describe.only("BountyFactory", function () {
+describe("BountyFactory", function () {
     let BountyFactory;
     let bountyFactory;
     let MockERC20;
@@ -15,19 +16,25 @@ describe.only("BountyFactory", function () {
 
     this.beforeEach(async function () {
         [deployer, owner, addr1, addr2] = await ethers.getSigners();
+        // console.log("deployer:", await deployer.getAddress());
+        // console.log("owner:", await owner.getAddress());
+        // console.log("addr1:", await addr1.getAddress());
+        // console.log("addr2:", await addr2.getAddress());
 
         // Mock ERC20 Token
         MockERC20 = await ethers.getContractFactory("MockERC20");
         mockToken = await MockERC20.deploy("Mock Token", "MTK");
-        await mockToken.deployed();
+        mockTokenAddress = await mockToken.getAddress();
+        // console.log("mockTokenAddress:", mockTokenAddress);
 
         BountyFactory = await ethers.getContractFactory("BountyFactory");
         bountyFactory = await upgrades.deployProxy(BountyFactory, [], {
             initializer: 'initialize',
             kind: 'uups'
         });
+        await bountyFactory.waitForDeployment();
 
-        proxyAddress = bountyFactory.address;
+        proxyAddress = await bountyFactory.getAddress();
         // console.log("proxyAddress:", proxyAddress);
         implementationAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
         // console.log("implementationAddress:", implementationAddress);
@@ -35,8 +42,8 @@ describe.only("BountyFactory", function () {
 
     describe("initialize", function () {
         it("should correctly initialize the contract", async function () {
-            expect(await bountyFactory.owner()).to.equal(deployer.address);
-            expect(await bountyFactory.store()).to.not.equal(ethers.constants.AddressZero);
+            expect(await bountyFactory.owner()).to.equal(await deployer.getAddress());
+            expect(await bountyFactory.store()).to.not.equal(ethers.ZeroAddress);
         });
 
         it("should not allow duplicate initialization", async function () {
@@ -47,24 +54,30 @@ describe.only("BountyFactory", function () {
 
     describe("createBounty", function () {
         const applyDeadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour
-        const founderDepositAmount = ethers.utils.parseEther("1.0");
-        const applicantDepositAmount = ethers.utils.parseEther("0.1");
+        const founderDepositAmount = ethers.parseEther("1.0");
+        const applicantDepositAmount = ethers.parseEther("0.1");
 
         it("使用ETH Create Bounty, _founderDepositAmount = 0", async function () {
             const tx = await bountyFactory.connect(owner).createBounty(
-                ethers.constants.AddressZero,
+                ethers.ZeroAddress,
                 0,
                 applicantDepositAmount,
                 applyDeadline
             );
 
             const receipt = await tx.wait();
-            const event = receipt.events.find(e => e.event === 'Created');
+            const event = receipt.logs.map(log => {
+                try {
+                    return bountyFactory.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Created');
 
             expect(event).to.not.be.undefined;
             expect(event.args.founder).to.equal(owner.address);
             console.log("event.args.bounty:", event.args.bounty);
-            expect(event.args.bounty).to.not.equal(ethers.constants.AddressZero);
+            expect(event.args.bounty).to.not.equal(ethers.ZeroAddress);
 
             const children = await bountyFactory.children();
             expect(children.length).to.equal(1);
@@ -73,7 +86,7 @@ describe.only("BountyFactory", function () {
 
         it("使用ETH Create Bounty, _founderDepositAmount != 0", async function () {
             const tx = await bountyFactory.connect(owner).createBounty(
-                ethers.constants.AddressZero,
+                ethers.ZeroAddress,
                 founderDepositAmount,
                 applicantDepositAmount,
                 applyDeadline,
@@ -81,10 +94,16 @@ describe.only("BountyFactory", function () {
             );
 
             const receipt = await tx.wait();
-            const event = receipt.events.find(e => e.event === 'Created');
+            const event = receipt.logs.map(log => {
+                try {
+                    return bountyFactory.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Created');
 
             expect(event).to.not.be.undefined;
-            expect(event.args.founder).to.equal(owner.address);
+            expect(event.args.founder).to.equal(await owner.getAddress());
             const bountyAddress = event.args.bounty;
             console.log("bountyAddress:", bountyAddress);
 
@@ -98,18 +117,26 @@ describe.only("BountyFactory", function () {
 
         it("使用ERC20 create Bounty", async function () {
 
-            await mockToken.mint(owner.address, founderDepositAmount);
-            await mockToken.connect(owner).approve(bountyFactory.address, founderDepositAmount);
+            await mockToken.mint(await owner.getAddress(), founderDepositAmount);
+            await mockToken.connect(owner).approve(await bountyFactory.getAddress(), founderDepositAmount);
+            const tokenAddress = await mockToken.getAddress();
+            console.log("Mock Token Address:", tokenAddress);
 
             const tx = await bountyFactory.connect(owner).createBounty(
-                mockToken.address,
+                tokenAddress,
                 founderDepositAmount,
                 applicantDepositAmount,
                 applyDeadline
             );
 
             const receipt = await tx.wait();
-            const event = receipt.events.find(e => e.event === 'Created');
+            const event = receipt.logs.map(log => {
+                try {
+                    return bountyFactory.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Created');
 
             expect(event).to.not.be.undefined;
             expect(event.args.founder).to.equal(owner.address);
@@ -126,7 +153,7 @@ describe.only("BountyFactory", function () {
             const expiredDeadline = Math.floor(Date.now() / 1000) - 3600; // 1小时前
 
             await expect(bountyFactory.connect(owner).createBounty(
-                ethers.constants.AddressZero,
+                ethers.ZeroAddress,
                 founderDepositAmount,
                 applicantDepositAmount,
                 expiredDeadline,
@@ -135,10 +162,10 @@ describe.only("BountyFactory", function () {
         });
 
         it("ETH余额不足, 不允许 Create Bounty", async function () {
-            const largeAmount = ethers.utils.parseEther("1000000.0"); // 一个很大的金额
+            const largeAmount = ethers.parseEther("1000000.0"); // 一个很大的金额
 
             await expect(bountyFactory.connect(owner).createBounty(
-                ethers.constants.AddressZero,
+                ethers.ZeroAddress,
                 largeAmount,
                 applicantDepositAmount,
                 applyDeadline,
@@ -147,10 +174,10 @@ describe.only("BountyFactory", function () {
         });
 
         it("ERC20余额不足, 不允许 Create Bounty", async function () {
-            const largeAmount = ethers.utils.parseEther("1000000.0"); // 一个很大的金额
+            const largeAmount = ethers.parseEther("1000000.0"); // 一个很大的金额
 
             await expect(bountyFactory.connect(owner).createBounty(
-                mockToken.address,
+                await mockToken.getAddress(),
                 largeAmount,
                 applicantDepositAmount,
                 applyDeadline
@@ -162,7 +189,7 @@ describe.only("BountyFactory", function () {
             await mockToken.mint(owner.address, founderDepositAmount);
 
             await expect(bountyFactory.connect(owner).createBounty(
-                mockToken.address,
+                await mockToken.getAddress(),
                 founderDepositAmount,
                 applicantDepositAmount,
                 applyDeadline
@@ -171,8 +198,8 @@ describe.only("BountyFactory", function () {
     });
 
     const applyDeadline = Math.floor(Date.now() / 1000) + 3600;
-    const founderDepositAmount = ethers.utils.parseEther("1.0");
-    const applicantDepositAmount = ethers.utils.parseEther("0.1");
+    const founderDepositAmount = ethers.parseEther("1.0");
+    const applicantDepositAmount = ethers.parseEther("0.1");
 
     describe("children() test", function () {
 
@@ -183,19 +210,24 @@ describe.only("BountyFactory", function () {
         });
 
         it("create one bounty", async function () {
-            // create one bounty
-            await mockToken.mint(owner.address, founderDepositAmount);
-            await mockToken.connect(owner).approve(bountyFactory.address, founderDepositAmount);
+            await mockToken.mint(await owner.getAddress(), founderDepositAmount);
+            await mockToken.connect(owner).approve(await bountyFactory.getAddress(), founderDepositAmount);
 
             const tx = await bountyFactory.connect(owner).createBounty(
-                mockToken.address,
+                await mockToken.getAddress(),
                 founderDepositAmount,
                 applicantDepositAmount,
                 applyDeadline
             );
 
             const receipt = await tx.wait();
-            const event = receipt.events.find(e => e.event === 'Created');
+            const event = receipt.logs.map(log => {
+                try {
+                    return bountyFactory.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Created');
 
             const expectedBountyAddress = event.args.bounty;
             console.log("expectedBountyAddress:", expectedBountyAddress);
@@ -208,31 +240,37 @@ describe.only("BountyFactory", function () {
             expect(children[0]).to.equal(expectedBountyAddress);
 
             const bounty = await ethers.getContractAt("Bounty", children[0]);
-            expect(bounty.address).to.equal(expectedBountyAddress);
+            expect(await bounty.getAddress()).to.equal(expectedBountyAddress);
         });
     });
 
     describe("isChild() test", function () {
         it("isChild() is empty", async function () {
-            const isChild = await bountyFactory.connect(owner).isChild(ethers.constants.AddressZero);
+            const isChild = await bountyFactory.connect(owner).isChild(ethers.ZeroAddress);
             console.log("isChild:", isChild);
             expect(isChild).to.equal(false);
         });
 
         it("isChild() is not empty", async function () {
 
-            await mockToken.mint(owner.address, founderDepositAmount);
-            await mockToken.connect(owner).approve(bountyFactory.address, founderDepositAmount);
+            await mockToken.mint(await owner.getAddress(), founderDepositAmount);
+            await mockToken.connect(owner).approve(await bountyFactory.getAddress(), founderDepositAmount);
 
             const tx = await bountyFactory.connect(owner).createBounty(
-                mockToken.address,
+                await mockToken.getAddress(),
                 founderDepositAmount,
                 applicantDepositAmount,
                 applyDeadline
             );
 
             const receipt = await tx.wait();
-            const event = receipt.events.find(e => e.event === 'Created');
+            const event = receipt.logs.map(log => {
+                try {
+                    return bountyFactory.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Created');
             const bountyAddress = event.args.bounty;
 
             const isChild = await bountyFactory.connect(owner).isChild(bountyAddress);
@@ -242,16 +280,30 @@ describe.only("BountyFactory", function () {
     })
 
     describe("Upgrade tests", function () {
-        // let BountyFactoryV2;
-
-        it.only("should upgrade to V2", async function () {
+        it("should upgrade", async function () {
+            const oldImplAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+            console.log("Old Impl Address:", oldImplAddress);
+            // 部署新版本
             const BountyFactoryV2 = await ethers.getContractFactory("BountyFactoryV2");
-        
-            // 直接使用proxyAddress升级
-            const upgraded = await upgrades.upgradeProxy(proxyAddress, BountyFactoryV2);
-            
-            // 直接调用升级后的方法
-            expect(await upgraded.newFunction()).to.equal("V2");
+            const newBountyFactory = await upgrades.upgradeProxy(proxyAddress, BountyFactoryV2);
+            await newBountyFactory.waitForDeployment();
+
+            // 获取新实现地址
+            const newImplAddress = await upgrades.erc1967.getImplementationAddress(proxyAddress);
+            console.log("New Impl Address:", newImplAddress);
+
+            const newProxyAddress = await newBountyFactory.getAddress();
+
+            // 验证代理地址没有改变
+            expect(newProxyAddress).to.equal(proxyAddress);
+
+            // 验证实现地址已更新
+            expect(newImplAddress).to.not.equal(oldImplAddress);
+
+            // 测试新功能
+            const newValue = await newBountyFactory.newFunction();
+            console.log("newValue:", newValue);
+            expect(newValue).to.equal("TEST");
         });
     });
 });

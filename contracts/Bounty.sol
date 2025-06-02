@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: SimPL-2.0
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.22;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -39,13 +39,13 @@ contract BountyFactory is
     function initialize() public initializer {
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
-        __Ownable_init(msg.sender);
+        __Ownable_init(_msgSender());
         store = new FactoryStore();
     }
 
     function _authorizeUpgrade(
         address newImplementation
-    ) internal virtual override onlyOwner {}
+    ) internal override onlyOwner {}
 
     /**
      * @notice 创建 Bounty

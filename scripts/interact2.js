@@ -12,7 +12,7 @@ async function main() {
     '0x0000000000000000000000000000000000000000',
     // ethers.utils.parseEther("0.01"),
     0,
-    ethers.utils.parseEther("0.1"),
+    ethers.parseEther("0.1"),
     Date.now() + 10000000000000,
     // {
     //   value: ethers.utils.parseEther("0.01"),

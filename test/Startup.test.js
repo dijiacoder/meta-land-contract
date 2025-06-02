@@ -18,15 +18,15 @@ describe("Startup", function () {
      */
     const [deployer] = await ethers.getSigners();
     console.log("Deploying contracts with the account:", deployer.address);
-//    console.log("Deploying contracts with the account:", deployer.address);
+    //    console.log("Deploying contracts with the account:", deployer.address);
 
     startup = await upgrades.deployProxy(Startup, [], {
-        initializer: 'initialize',
-        kind: 'uups'
+      initializer: 'initialize',
+      kind: 'uups'
     });
-    await startup.deployed();
-    //await startup.waitForDeployment();
-     console.log("Startup deployed to:", startup.address);
+    // await startup.deployed();
+    await startup.waitForDeployment();
+    console.log("Startup deployed to:", startup.address);
 
     // 获取测试账户
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
@@ -59,11 +59,11 @@ describe("Startup", function () {
         isValidate: true
       };
 
-  const tx = await startup.newStartup(profile);
-  await tx.wait(); // 等待交易被确认
+      const tx = await startup.newStartup(profile);
+      await tx.wait(); // 等待交易被确认
 
-    const createdStartup = await startup.startups(curName);
-    // console.log("now is ", createdStartup)
+      const createdStartup = await startup.startups(curName);
+      // console.log("now is ", createdStartup)
       expect(createdStartup.name).to.equal(curName);
       expect(createdStartup.mode).to.equal(2);
       expect(createdStartup.logo).to.equal("https://example.com/logo.png");
@@ -84,7 +84,7 @@ describe("Startup", function () {
         isValidate: true
       };
 
-      const tx =await startup.newStartup(profile);
+      const tx = await startup.newStartup(profile);
       await tx.wait(); // 等待交易被确认
 
       await expect(startup.newStartup(profile))

@@ -31,6 +31,9 @@ Next version of Comunion contract project
     ```
     npx hardhat test
     ```
+    ```
+    npx hardhat coverage
+    ```
 
 # how to created local environment
 
