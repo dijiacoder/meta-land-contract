@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: SimPL-2.0
-pragma solidity >=0.8.x <0.9.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

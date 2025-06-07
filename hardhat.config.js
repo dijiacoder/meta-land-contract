@@ -2,6 +2,7 @@ require('@openzeppelin/hardhat-upgrades');
 require("@nomicfoundation/hardhat-toolbox");
 require('hardhat-abi-exporter');
 require("hardhat-contract-sizer");
+require("solidity-coverage");
 
 // 配置参考 .env.example里的，换成自己真实的，放到.env里就可以了
 // config
@@ -43,12 +44,12 @@ module.exports = {
     },
   },
   networks: {
-    mainnet: {
-      url: `https://eth-mainnet.g.alchemy.com/v2/${MAINNET_ALCHEMY_AK}`,
-      accounts: [`${MAINNET_PK}`],
-      saveDeployments: true,
-      chainId: 1,
-    },
+    // mainnet: {
+    //   url: `https://eth-mainnet.g.alchemy.com/v2/${MAINNET_ALCHEMY_AK}`,
+    //   accounts: [`${MAINNET_PK}`],
+    //   saveDeployments: true,
+    //   chainId: 1,
+    // },
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${SEPOLIA_ALCHEMY_AK}`,
       accounts: [`${SEPOLIA_PK_ONE}`, `${SEPOLIA_PK_TWO}`, `${SEPOLIA_PK_THREE}`],
@@ -66,5 +67,11 @@ module.exports = {
     alphaSort: true,
     runOnCompile: false, // 编译时自动显示大小
     disambiguatePaths: false,
+  },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts"
   },
 };
