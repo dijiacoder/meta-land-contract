@@ -4,7 +4,7 @@ const { ethers, upgrades } = require("hardhat");
 
 describe("Bounty", function () {
     let BountyFactory, BountyBeacon, Bounty, BountyV2, FactoryStore, BountyStore;
-    let owner, addr1, addr2;
+    let owner, addr1, addr2, addr3;
     let bountyFactory, bountyFactoryProxy, bountyBeacon, bountyV1, bountyV2;
     let erc20A, erc20B;
     let provider;
@@ -21,7 +21,7 @@ describe("Bounty", function () {
         const ERC20 = await ethers.getContractFactory("TokenERC20");
         provider = ethers.provider;
 
-        [owner, addr1, addr2] = await ethers.getSigners();
+        [owner, addr1, addr2, addr3] = await ethers.getSigners();
 
         const erc20ADeploy = await ERC20.deploy(ethers.utils.parseEther("1000"), "Test Token A", "TTA");
         await erc20ADeploy.deployed();
@@ -123,11 +123,12 @@ describe("Bounty", function () {
     });
 
     describe("Use BountyFactory createBounty", function () {
-        const applyDeadline = Math.floor(Date.now() / 1000) + 7 * 3600; // 7 days
         const founderDepositAmount = ethers.utils.parseEther("1.0");
         const applicantDepositAmount = ethers.utils.parseEther("0.1");
 
         it("Use ETH create bounty (_founderDepositAmount = 0)", async function () {
+            const block = await provider.getBlock('latest');
+            const applyDeadline = block.timestamp + 7 * 3600;
             const tx = await bountyFactory.connect(addr1).createBounty(
                 ethers.constants.AddressZero,
                 0,
@@ -154,11 +155,13 @@ describe("Bounty", function () {
             expect(children[0]).to.equal(event.args.bounty);
 
             const isChild = await bountyFactory.connect(addr1).isChild(event.args.bounty);
-            console.log("isChild:", isChild);
+            // console.log("isChild:", isChild);
             expect(isChild).to.equal(true);
         });
 
         it("Use ETH create bounty (_founderDepositAmount > 0)", async function () {
+            const block = await provider.getBlock('latest');
+            const applyDeadline = block.timestamp + 7 * 3600;
             const tx = await bountyFactory.connect(addr1).createBounty(
                 ethers.constants.AddressZero,
                 founderDepositAmount,
@@ -190,6 +193,8 @@ describe("Bounty", function () {
         });
 
         it("Use ERC20 create bounty", async function () {
+            const block = await provider.getBlock('latest');
+            const applyDeadline = block.timestamp + 7 * 3600;
             await ERC20Token.mint(addr1.address, founderDepositAmount);
             await ERC20Token.connect(addr1).approve(bountyFactory.address, founderDepositAmount);
 
@@ -221,8 +226,8 @@ describe("Bounty", function () {
         });
 
         it("Should create failed (Applicant cutoff date is expired)", async function () {
-
-            const expiredDeadline = Math.floor(Date.now() / 1000) - 3600;
+            const block = await provider.getBlock('latest');
+            const expiredDeadline = block.timestamp - 3600;
             await expect(bountyFactory.connect(addr1).createBounty(
                 ethers.constants.AddressZero,
                 0,
@@ -232,7 +237,8 @@ describe("Bounty", function () {
         });
 
         it("Should create failed (msg.value is not valid)", async function () {
-
+            const block = await provider.getBlock('latest');
+            const applyDeadline = block.timestamp + 7 * 3600;
             const founderDepositAmount2 = ethers.utils.parseEther("2.0");
             await expect(bountyFactory.connect(addr1).createBounty(
                 ethers.constants.AddressZero,
@@ -244,7 +250,8 @@ describe("Bounty", function () {
         });
 
         it("Should create failed (Deposit token balance is insufficient)", async function () {
-            
+            const block = await provider.getBlock('latest');
+            const applyDeadline = block.timestamp + 7 * 3600;
             await ERC20Token.mint(addr2.address, ethers.utils.parseEther("0.5"));
             await ERC20Token.connect(addr2).approve(bountyFactory.address, ethers.utils.parseEther("0.5"));
             await expect(bountyFactory.connect(addr2).createBounty(
@@ -257,7 +264,8 @@ describe("Bounty", function () {
         });
 
         it("Should create failed (Deposit token allowance is insufficient)", async function () {
-            
+            const block = await provider.getBlock('latest');
+            const applyDeadline = block.timestamp + 7 * 3600;
             await ERC20Token.mint(addr2.address, ethers.utils.parseEther("1.0"));
             await ERC20Token.connect(addr2).approve(bountyFactory.address, ethers.utils.parseEther("0.5"));
             await expect(bountyFactory.connect(addr2).createBounty(
@@ -347,5 +355,168 @@ describe("Bounty", function () {
             expect(await bounty1V2Ins.isUpgraded()).to.eq(100);
             expect(await bounty2V2Ins.isUpgraded()).to.eq(1000);
         });
+    });
+
+    describe("Bounty ApplyFor with ETH", function () {
+
+        let bounty;
+
+        beforeEach(async function () {
+            const block = await provider.getBlock('latest');
+            const applyDeadline = block.timestamp + 7 * 3600;
+            const founderDepositAmount = ethers.utils.parseEther("1.0");
+            const applicantDepositAmount = ethers.utils.parseEther("1.0");
+            const tx = await bountyFactory.connect(addr1).createBounty(
+                ethers.constants.AddressZero,
+                founderDepositAmount,
+                applicantDepositAmount,
+                applyDeadline,
+                { value: founderDepositAmount }
+            );
+
+            const receipt = await tx.wait();
+            const event = receipt.logs.map(log => {
+                try {
+                    return bountyFactory.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Created');
+            expect(event).to.not.be.undefined;
+            expect(event.args.founder).to.equal(addr1.address);
+            expect(event.args.bounty).to.not.equal(ethers.constants.AddressZero);
+            const bountyAddress = event.args.bounty;
+            // console.log("bountyAddress:", bountyAddress);
+            bounty = await ethers.getContractAt("Bounty", bountyAddress);
+        })
+
+        it("Should apply for successfully (use ETH)", async function () {
+            // addr2 applyFor
+            const tx = await bounty.connect(addr2).applyFor(ethers.utils.parseEther("1.1"), { value: ethers.utils.parseEther("1.1") });
+            const receipt = await tx.wait();
+            const event = receipt.logs.map(log => {
+                try {
+                    return bounty.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Apply');
+
+            expect(event).to.not.be.undefined;
+            expect(event.args.applicant).to.equal(addr2.address);
+            expect(event.args.amount).to.equal(ethers.utils.parseEther("1.1"));
+            expect(event.args.balance).to.equal(ethers.utils.parseEther("1.1"));
+            expect(event.args.applicantsBalance).to.equal(ethers.utils.parseEther("1.1"));
+
+            // addr3 applyFor
+            const tx2 = await bounty.connect(addr3).applyFor(ethers.utils.parseEther("1.2"), { value: ethers.utils.parseEther("1.2") });
+            const receipt2 = await tx2.wait();
+            const event2 = receipt2.logs.map(log => {
+                try {
+                    return bounty.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Apply');
+
+            expect(event2).to.not.be.undefined;
+            expect(event2.args.applicant).to.equal(addr3.address);
+            expect(event2.args.amount).to.equal(ethers.utils.parseEther("1.2"));
+            expect(event2.args.balance).to.equal(ethers.utils.parseEther("1.2"));
+            expect(event2.args.applicantsBalance).to.equal(ethers.utils.parseEther("2.3"));
+
+            const vaultAddress = await bounty.connect(owner).vaultAccount();
+            const bountyStore = await ethers.getContractAt("BountyStore", vaultAddress);
+            const [amount, status] = await bountyStore.connect(bounty.address).getApplicant(addr2.address);
+            expect(amount).to.equal(ethers.utils.parseEther("1.1"));
+            expect(status).to.equal(1);
+            const [amount2, status2] = await bountyStore.connect(bounty.address).getApplicant(addr3.address);
+            expect(amount2).to.equal(ethers.utils.parseEther("1.2"));
+            expect(status2).to.equal(1);
+        })
+
+        it("Should applyFor failed (msg.value is not valid)", async function () {
+            await expect(bounty.connect(addr2).applyFor(ethers.utils.parseEther("1.0"), { value: ethers.utils.parseEther("1.1") }))
+                .to.be.revertedWith("msg.value is not valid");
+        })
+
+        it("Should applyFor failed (Deposit amount less than limit)", async function () {
+            await expect(bounty.connect(addr2).applyFor(ethers.utils.parseEther("0.1"), { value: ethers.utils.parseEther("0.1") }))
+                .to.be.revertedWith("Deposit amount less than limit");
+        })
+    });
+
+    describe("Bounty ApplyFor with ERC20Token", function () {
+
+        let bounty;
+
+        beforeEach(async function () {
+
+            await ERC20Token.mint(addr1.address, ethers.utils.parseEther("1.0"));
+            await ERC20Token.connect(addr1).approve(bountyFactory.address, ethers.utils.parseEther("1.0"));
+
+            const block = await provider.getBlock('latest');
+            const applyDeadline = block.timestamp + 7 * 3600;
+            const founderDepositAmount = ethers.utils.parseEther("1.0");
+            const applicantDepositAmount = ethers.utils.parseEther("1.0");
+            const tx = await bountyFactory.connect(addr1).createBounty(
+                erc20TokenAddress,
+                founderDepositAmount,
+                applicantDepositAmount,
+                applyDeadline,
+                { value: founderDepositAmount }
+            );
+
+            const receipt = await tx.wait();
+            const event = receipt.logs.map(log => {
+                try {
+                    return bountyFactory.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Created');
+            expect(event).to.not.be.undefined;
+            expect(event.args.founder).to.equal(addr1.address);
+            expect(event.args.bounty).to.not.equal(ethers.constants.AddressZero);
+            const bountyAddress = event.args.bounty;
+            // console.log("bountyAddress:", bountyAddress);
+            bounty = await ethers.getContractAt("Bounty", bountyAddress);
+        })
+
+        it("Should apply for successfully (use ERC20Token)", async function () {
+            // addr2 applyFor
+            await ERC20Token.mint(addr2.address, ethers.utils.parseEther("1.0"));
+            await ERC20Token.connect(addr2).approve(bounty.address, ethers.utils.parseEther("1.0"));
+            
+            const tx = await bounty.connect(addr2).applyFor(ethers.utils.parseEther("1.0"), { value: ethers.utils.parseEther("1.0") });
+            const receipt = await tx.wait();
+            const event = receipt.logs.map(log => {
+                try {
+                    return bounty.interface.parseLog(log);
+                } catch (e) {
+                    return null;
+                }
+            }).find(e => e?.name === 'Apply');
+
+            expect(event).to.not.be.undefined;
+            expect(event.args.applicant).to.equal(addr2.address);
+            expect(event.args.amount).to.equal(ethers.utils.parseEther("1.0"));
+            expect(event.args.balance).to.equal(ethers.utils.parseEther("1.0"));
+            expect(event.args.applicantsBalance).to.equal(ethers.utils.parseEther("1.0"));
+        })
+
+        it("Should applyFor failed (Your deposit token allowance is insufficient)", async function () {
+            await ERC20Token.mint(addr2.address, ethers.utils.parseEther("1.0"));
+            await ERC20Token.connect(addr2).approve(bounty.address, ethers.utils.parseEther("0.5"));
+            await expect(bounty.connect(addr2).applyFor(ethers.utils.parseEther("1.0"), { value: ethers.utils.parseEther("1.0") }))
+                .to.be.revertedWith("Your deposit token allowance is insufficient");
+        })
+
+        it("Should applyFor failed (Your deposit token balance is insufficient)", async function () {
+            await ERC20Token.mint(addr2.address, ethers.utils.parseEther("0.9"));
+            await ERC20Token.connect(addr2).approve(bounty.address, ethers.utils.parseEther("1.0"));
+            await expect(bounty.connect(addr2).applyFor(ethers.utils.parseEther("1.0"), { value: ethers.utils.parseEther("1.0") }))
+                .to.be.revertedWith("Your deposit token balance is insufficient");
+        })
     });
 });
